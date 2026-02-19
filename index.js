@@ -424,18 +424,34 @@ const tcpServer = net.createServer(socket => {
                 }
 
                 else if (protocol === 0x12 || protocol === 0x22) {
-
-                    const lat = packet.readUInt32BE(11) / 1800000;
-                    const lng = packet.readUInt32BE(15) / 1800000;
-                    const speed = packet[19];
-                    const course = packet.readUInt16BE(20) & 0x03ff;
+                    const lat_raw = packet.readUInt32BE(11);
+                    const lng_raw = packet.readUInt32BE(15);
+                    const speed_raw = packet[19];
+                    const course_raw = packet.readUInt16BE(20);
 
                     markSeen(deviceId);
 
+                    // Parse base coordinates
+                    const lat = lat_raw / 1800000;
+                    const lng = lng_raw / 1800000;
+                    
+                    // Hemisphere detection from flags byte 21 (Bit 2=S/N, Bit 3=W/E)
+                    const flags_byte = packet[21];
+                    const is_south = (flags_byte >> 2) & 1;
+                    const is_west = (flags_byte >> 3) & 1;
+                    
+                    // Apply hemisphere sign
+                    const lat_final = is_south ? -lat : lat;
+                    const lng_final = is_west ? -lng : lng;
+                    
+                    const speed = speed_raw;
+                    const course = course_raw & 0x03ff;
+
                     const state = deviceState.get(deviceId) || {};
+
                     await handleLocation({
-                        lat,
-                        lng,
+                        lat: lat, //lat_final
+                        lng: lng, //lng_final
                         speed,
                         course,
                         batt_level: state.batt_level,
