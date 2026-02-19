@@ -1,6 +1,8 @@
 const net = require('net');
 const http = require('http');
 const url = require('url');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
@@ -72,8 +74,34 @@ function getNextSerial(deviceId) {
 // ======================================================
 // 3. LOGGER
 // ======================================================
-const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+const LOG_LEVEL  = process.env.LOG_LEVEL  || 'info';
+const LOG_TO_FILE = process.env.LOG_TO_FILE !== 'false'; // default: true
+const LOG_DIR    = path.resolve(process.env.LOG_DIR || 'logs');
+const LEVELS     = { error: 0, warn: 1, info: 2, debug: 3 };
+
+// Ensure log directory exists
+if (LOG_TO_FILE && !fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+/**
+ * Returns the log file path for today (rotates daily).
+ * Format: logs/YYYY-MM-DD.log
+ */
+function getLogFilePath() {
+    const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    return path.join(LOG_DIR, `${date}.log`);
+}
+
+/**
+ * Appends a log line to the current day's log file (non-blocking).
+ * Falls back silently on write error to avoid crashing the server.
+ */
+function writeToFile(line) {
+    fs.appendFile(getLogFilePath(), line + '\n', (err) => {
+        if (err) process.stderr.write(`[LOGGER] File write error: ${err.message}\n`);
+    });
+}
 
 function log(level, tag, message, data) {
     if (LEVELS[level] > LEVELS[LOG_LEVEL]) return;
@@ -86,7 +114,10 @@ function log(level, tag, message, data) {
     };
 
     if (data !== undefined) entry.data = data;
-    console.log(JSON.stringify(entry));
+
+    const line = JSON.stringify(entry);
+    console.log(line);
+    if (LOG_TO_FILE) writeToFile(line);
 }
 
 const logger = {
