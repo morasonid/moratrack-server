@@ -1,18 +1,23 @@
 {
   "name": "moratrack-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
     "dotenv": "^17.2.4",
+    "index.js": "^0.0.3",
     "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.0.1",
+    "node": "^25.8.1",
     "ws": "^8.19.0"
   }
 }
